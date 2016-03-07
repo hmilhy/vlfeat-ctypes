@@ -7,9 +7,9 @@ from ctypes import (c_int, c_float, c_double, c_void_p,
 import numpy as np
 import numpy.ctypeslib as npc
 
-from .vl_ctypes import (LIB, CustomStructure, Enum,
+from vlfeat.vl_ctypes import (LIB, CustomStructure, Enum,
                         vl_type, vl_size, np_to_c_types, c_to_vl_types)
-from .utils import is_integer
+from vlfeat.utils import is_integer
 
 
 class VectorComparisonType(Enum):

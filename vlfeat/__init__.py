@@ -20,6 +20,27 @@ def vl_phow(*args, **kwargs):
     from .phow import vl_phow as f
     return f(*args, **kwargs)
 
+###########################################################
+# kmeans
 def vl_kmeans(*args, **kwargs):
-    from .kmeans import vl_kmeans as f
+    from kmeans.kmeans import vl_kmeans as f
     return f(*args, **kwargs)
+
+def vl_ikmeans(*args, **kwargs):
+    from kmeans.ikmeans import vl_ikmeans as f
+    return f(*args, **kwargs)
+
+def vl_ikmeanspush(*args, **kwargs):
+    from kmeans.ikmeanspush import vl_ikmeanspush as f
+    return f(*args,**kwargs)
+
+def vl_hikmeans(*args, **kwargs):
+    from kmeans.hikmeans import vl_hikmeans as f
+    return f(*args, **kwargs)
+
+def vl_hikmeanspush(*args, **kwargs):
+    from kmeans.hikmeanspush import vl_hikmeanspush as f
+    return f(*args, **kwargs)
+
+###########################################################
+#

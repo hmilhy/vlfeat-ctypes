@@ -139,6 +139,10 @@ class CustomStructure(Structure):
 # TODO actually figure out if it's built LP64 or ILP64 or whatever
 vl_size = c_uint64
 vl_index = c_int64
+vl_uint8 = c_uint8
+vl_uint32 = c_uint32
+vl_int32 = c_int32
+vl_uint  = c_uint
 
 
 class vl_type(Enum):
