@@ -8,20 +8,15 @@ if __name__ == '__main__':
     data = np.asarray(data, dtype='uint8')
     K = 3
     nleaves = 100
-    hikmeans, tree = vlfeat.vl_hikmeans(data, K, nleaves, verbose=1)
+    tree = vlfeat.vl_hikmeans(data, K, nleaves, verbose=1)
 
-    pdb.set_trace()
-    
+    path = '/home/sh/tmp/hikmeans/tree.pkl'
+    pickle.dump(tree,open(path,'wb'))
+
+    tree2 = pickle.load(open(path,'rb'))
     datat = np.random.rand(2,100000)*255
-    AT, hikmeans_2 = vlfeat.vl_hikmeanspush(tree, datat)
+    AT = vlfeat.vl_hikmeanspush(tree2, datat)
 
-    print (hikmeans == hikmeans_2)
-
-    #path = '/home/sh/tmp/hikmeans'
-    #pickle.dump(tree, open(path, 'wb'))
-    #tree_load = pickle.load(open(path, 'rb'))
-    #AT_load = vlfeat.vl_hikmeanspush(tree_load, datat)
-
-
-    
     pdb.set_trace()
+
+

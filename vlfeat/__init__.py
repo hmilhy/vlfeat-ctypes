@@ -34,6 +34,10 @@ def vl_ikmeanspush(*args, **kwargs):
     from kmeans.ikmeanspush import vl_ikmeanspush as f
     return f(*args,**kwargs)
 
+def vl_ikmeanshist(*args, **kwargs):
+    from kmeans.ikmeanshist import vl_ikmeanshist as f
+    return f(*args, **kwargs)
+
 def vl_hikmeans(*args, **kwargs):
     from kmeans.hikmeans import vl_hikmeans as f
     return f(*args, **kwargs)

@@ -18,7 +18,7 @@ from .ikmeans import (IKMAlgorithm,VLIKMFilt,vl_ikmacc_t,
                       vl_ikm_init, vl_ikm_push)
 
 def vl_ikmeanspush(X, C, verbosity=0, method='LloyD'):
-    pdb.set_trace()
+    #pdb.set_trace()
     M,N = X.shape
     K = C.shape[1]
 

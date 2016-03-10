@@ -15,11 +15,11 @@ from vlfeat.vl_ctypes import (LIB, CustomStructure, Enum,
                         vl_type, vl_size, vl_uint8,
                         np_to_c_types, c_to_vl_types)
 
-from vlfeat.ikmeans import (VLIKMFilt, VLIKMFilt_p,
+from .ikmeans import (VLIKMFilt, VLIKMFilt_p,
                       vl_ikm_get_K, vl_ikm_get_ndims, vl_ikm_get_centers,
                       vl_ikm_new, IKMAlgorithm,vl_ikm_init)
 
-from vlfeat.hikmeans import (VLHIKMNode, VLHIKMTree, VLHIKMNode_p,
+from .hikmeans import (VLHIKMNode, VLHIKMTree, VLHIKMNode_p,
                        VLHIKMNode_p, IKMAlgorithm,
                        vl_hikm_get_depth,vl_hikm_get_K,
                        vl_hikm_get_ndims,vl_hikm_delete,
@@ -47,34 +47,25 @@ def vl_hikmeanspush(tree, data, method='lloyd', verbosity=0):
 
     data_p = np.ctypeslib.as_ctypes(data)
 
-    pdb.set_trace()
     vl_hikm_push(hikmeans, ids_p, data_p, N)
-    #vl_hikm_delete(tree)
-    for id_ in ids:
-        id_ = id_+1
-    return ids, hikmeans
+
+
+    return ids
 
 def python_to_hikm(ptree, algorithm):
-    pK = ptree['K']
-    pdepth = ptree['depth']
-
-    
-    tree       = VLHIKMTree
-    tree.depth = pdepth
-    tree.K     = pK
-    tree.M     = 0
-    tree.method= algorithm
-    tree.root  = xcreate(tree, ptree)
-    pdb.set_trace()
+    tree = VLHIKMTree(0,
+                      ptree['K'],
+                      ptree['depth'],
+                      0,
+                      algorithm.value,
+                      0,
+                      None)
+    tree.root  = pointer(xcreate(tree, ptree))
     return tree
 
 def xcreate(tree, pnode):
-    #pdb.set_trace()
-    pcenters = pnode['centers']
-    pcenters_p = np.ctypeslib.as_ctypes(pcenters)
-    psub = pnode['sub']
-
-    M , node_K = pcenters.shape
+    #psub = pnode['sub']
+    node_K, M = pnode['centers'].shape
     if M==0:
         print('A NODE.CENTERS has zero rows')
 
@@ -85,21 +76,22 @@ def xcreate(tree, pnode):
         tree.M = M
     elif(M != tree.M):
         print("A NODE.CENTERS fields has inconsistent dimensionality")
-    
-    node = VLHIKMNode
-    node.filter=vl_ikm_new(tree.method)
-    node.children=None
 
+
+
+    node = VLHIKMNode(vl_ikm_new(tree.method),
+                      None)
+    node.filter=vl_ikm_new(tree.method)
+    
+    pcenters = pnode['centers']
+    pcenters_p = np.ctypeslib.as_ctypes(pcenters)
     vl_ikm_init(node.filter, pcenters_p, M, node_K)
 
-    #pdb.set_trace()
-
-    
-    if len(psub) != 0:
-        node_children = (VLHIKMNode*node_K)()
-        node_children_p = cast(node_children, POINTER(VLHIKMNode))
-        node.children  = node_children_p
-        pdb.set_trace()
+    psub = pnode['sub']
+    if psub:
+        node.children = (VLHIKMNode_p*node_K)()
+        
         for k in range(node_K):
-            node_children_p[k] = xcreate(tree, psub[k])
+            node.children[k] = pointer(xcreate(tree, psub[k]))
+    
     return node

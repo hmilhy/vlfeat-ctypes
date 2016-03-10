@@ -15,7 +15,7 @@ from vlfeat.vl_ctypes import (LIB, CustomStructure, Enum,
                         vl_type, vl_size, vl_uint8,
                         np_to_c_types, c_to_vl_types)
 
-from vlfeat.ikmeans import (VLIKMFilt, VLIKMFilt_p,
+from .ikmeans import (VLIKMFilt, VLIKMFilt_p,vl_ikmacc_t,
                       vl_ikm_get_K, vl_ikm_get_ndims, vl_ikm_get_centers,
                       IKMAlgorithm)
 
@@ -23,10 +23,15 @@ from vlfeat.ikmeans import (VLIKMFilt, VLIKMFilt_p,
 
 
 class VLHIKMNode(CustomStructure):
-    _fields_ = [
-        ('filter',   VLIKMFilt_p),
-        ('children', c_void_p ),
-    ]
+    pass
+
+VLHIKMNode_p = POINTER(VLHIKMNode)
+
+VLHIKMNode._fields_ = [
+    ('filter',   VLIKMFilt_p),
+    ('children', POINTER(VLHIKMNode_p) ),
+]
+
 
 class VLHIKMTree(CustomStructure):
     _fields_ = [
@@ -36,11 +41,11 @@ class VLHIKMTree(CustomStructure):
         ('max_niters', vl_size),
         ('method',     c_int),
         ('verb',       c_int),
-        ('root',       c_void_p),
+        ('root',       VLHIKMNode_p),
     ]
 
 VLHIKMTree_p = POINTER(VLHIKMTree)
-VLHIKMNode_p = POINTER(VLHIKMNode)
+
 ##################################################################
 #
 # create and destroy
@@ -156,57 +161,49 @@ def vl_hikmeans(data, K, nleaves,
         if verbose:
             print('hikmeans: done')
 
-        tree = hikm_to_python(hikmeans, c_dtype)
+        tree = hikm_to_python(hikmeans)
         
-        return hikmeans,tree
+        return tree
             
     finally:
-        #vl_hikm_delete(hikmeans_p)
+        vl_hikm_delete(hikmeans_p)
         pass
 
         
 
-def hikm_to_python(tree, c_dtype):
-    K = vl_hikm_get_K(tree)
-    depth = vl_hikm_get_depth(tree)
+def hikm_to_python(tree):
+    #K = vl_hikm_get_K(tree)
+    #depth = vl_hikm_get_depth(tree)
     
-    ptree = {'K'       : K,
-             'depth'   : depth,
+    ptree = {'K'       : tree.K,
+             'depth'   : tree.depth,
              'centers' : [],
              'sub'     : []
     }
     if tree.root != None:
-        node = cast(tree.root, VLHIKMNode_p).contents
-        ptree = xcreate(ptree, node, c_dtype)
+        xcreate(ptree, tree.root.contents)
 
     return ptree
 
-def xcreate(pnode, node, c_dtype):
-    node_filter_p = cast(node.filter, VLIKMFilt_p)
-
-    node_K = vl_ikm_get_K(node_filter_p)
-    M = vl_ikm_get_ndims(node_filter_p)
-    
-    centers_p = vl_ikm_get_centers(node_filter_p)
-    centers_p = cast(centers_p, POINTER(c_dtype))
+def xcreate(pnode, node):
+    node_filt = cast(node.filter, VLIKMFilt_p).contents
+    node_K = node_filt.K
+    M = node_filt.M
+    centers_p = cast(node_filt.centers, POINTER(vl_ikmacc_t))
     centers = np.ctypeslib.as_array(centers_p, (node_K, M)).copy()
+    #print('node_K=%d, M=%d'%(node_K,M))
     pnode['centers'] = centers
-    
-    if node.children != None:
-        node_children_p = cast(node.children, POINTER(VLHIKMNode_p))
+
+    if node.children:
         arr_sub = []
         [arr_sub.append({'centers':[] , 'sub': []}) for n in range(node_K)]
         
         for k in range(node_K):
-            node_ = cast(node_children_p[k], VLHIKMNode_p)
-            node_ = node_.contents
+            node.children[0]
+            child = cast(node.children[k], VLHIKMNode_p).contents
+            xcreate(arr_sub[k], child)
             
-            xcreate(arr_sub[k], node_, c_dtype)
-            
-            #pdb.set_trace()
-            pass
         pnode['sub'] = arr_sub
-    #pdb.set_trace()
     return pnode
 
 

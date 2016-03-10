@@ -98,16 +98,16 @@ vl_kmeans_set_centers = LIB['vl_kmeans_set_centers']
 vl_kmeans_set_centers.restype = None
 vl_kmeans_set_centers.argtypes = [VlKMeans_p, c_void_p, vl_size, vl_size]
 
-vl_kmeans_seed_centers_with_rand_data = \
-    LIB['vl_kmeans_seed_centers_with_rand_data']
-vl_kmeans_seed_centers_with_rand_data.restype = None
-vl_kmeans_seed_centers_with_rand_data.argtypes = [
-    VlKMeans_p, c_void_p, vl_size, vl_size, vl_size]
+#vl_kmeans_seed_centers_with_rand_data = \
+#    LIB['vl_kmeans_seed_centers_with_rand_data']
+#vl_kmeans_seed_centers_with_rand_data.restype = None
+#vl_kmeans_seed_centers_with_rand_data.argtypes = [
+#    VlKMeans_p, c_void_p, vl_size, vl_size, vl_size]
 
-vl_kmeans_seed_centers_plus_plus = LIB['vl_kmeans_seed_centers_plus_plus']
-vl_kmeans_seed_centers_plus_plus.restype = None
-vl_kmeans_seed_centers_plus_plus.argtypes = [
-    VlKMeans_p, c_void_p, vl_size, vl_size, vl_size]
+#vl_kmeans_seed_centers_plus_plus = LIB['vl_kmeans_seed_centers_plus_plus']
+#vl_kmeans_seed_centers_plus_plus.restype = None
+#vl_kmeans_seed_centers_plus_plus.argtypes = [
+#    VlKMeans_p, c_void_p, vl_size, vl_size, vl_size]
 
 vl_kmeans_refine_centers = LIB['vl_kmeans_refine_centers']
 vl_kmeans_refine_centers.restype = c_double
