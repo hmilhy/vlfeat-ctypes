@@ -25,7 +25,7 @@ def vl_ikmeanspush(X, C, verbosity=0, method='LloyD'):
     C_p = cast(C.ctypes.data_as(c_void_p), POINTER(vl_ikmacc_t))
     data_p = cast(X.ctypes.data_as(c_void_p), POINTER(vl_uint8))
     
-    asgn = np.zeros((1, N), dtype=np.uint32)
+    asgn = np.zeros(N, dtype=np.uint32)
     asgn_p = cast(asgn.ctypes.data_as(c_void_p), POINTER(c_uint32) )
 
     algorithm = IKMAlgorithm._members[method.upper()]

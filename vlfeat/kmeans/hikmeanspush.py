@@ -21,36 +21,41 @@ from .ikmeans import (VLIKMFilt, VLIKMFilt_p,
 
 from .hikmeans import (VLHIKMNode, VLHIKMTree, VLHIKMNode_p,
                        VLHIKMNode_p, IKMAlgorithm,
-                       vl_hikm_get_depth,vl_hikm_get_K,
-                       vl_hikm_get_ndims,vl_hikm_delete,
-                       vl_hikm_push)
+                       vl_hikm_delete, vl_hikm_push)
 
 
 def vl_hikmeanspush(tree, data, method='lloyd', verbosity=0):
-    data = np.asarray(data)
-    M,N = data.shape
+    #pdb.set_trace()
+    data = np.asarray(data, dtype=np.uint8)
+    c_dtype = np_to_c_types.get(data.dtype, None)
+    if c_dtype !=c_ubyte:
+        raise TypeError('DATA must be UINT8')
+    
+    data_p = data.ctypes.data_as(c_void_p)
+    N = data.shape[1]
     
     algorithm = IKMAlgorithm._members[method.upper()]
 
-    hikmeans=python_to_hikm(tree, algorithm)
-
-    depth=vl_hikm_get_depth(hikmeans)
-
+    #####################################
+    # Do the job
+    hikmeans = python_to_hikm(tree, algorithm)
+    hikmeans.verbosity = verbosity
+    hikmeans_p = pointer(hikmeans)
+    
     if verbosity:
-        print("vl_hikmeanspush: ndim, %d K:%d depth: %d"%
-              (vl_hikm_get_ndims(tree),
-               vl_hikm_get_K(tree),
-               depth))
+        print("vl_hikmeanspush: ndim: %d  K:%d  depth: %d"%
+              (hikmeans.M,
+               hikmeans.K,
+               hikmeans.depth))
 
-    ids = np.zeros([depth, N], dtype=np.uint32)
-    ids_p = np.ctypeslib.as_ctypes(ids)
+    asgn = np.zeros([hikmeans.depth, N],
+                    dtype=np.uint32)
+    asgn_p = np.ctypeslib.as_ctypes(asgn)
 
-    data_p = np.ctypeslib.as_ctypes(data)
+    vl_hikm_push(hikmeans_p, asgn_p, data_p, N)
+    #vl_hikm_delete(hikmeans_p)
 
-    vl_hikm_push(hikmeans, ids_p, data_p, N)
-
-
-    return ids
+    return asgn, hikmeans
 
 def python_to_hikm(ptree, algorithm):
     tree = VLHIKMTree(0,
@@ -65,7 +70,10 @@ def python_to_hikm(ptree, algorithm):
 
 def xcreate(tree, pnode):
     #psub = pnode['sub']
-    node_K, M = pnode['centers'].shape
+    M = pnode['centers'].shape[0]
+    node_K = pnode['centers'].shape[1]
+
+    
     if M==0:
         print('A NODE.CENTERS has zero rows')
 

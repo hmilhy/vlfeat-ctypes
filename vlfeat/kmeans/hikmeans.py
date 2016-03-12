@@ -112,7 +112,7 @@ vl_hikm_push.argtypes = [VLHIKMTree_p, c_void_p, c_void_p, vl_size]
 
 ##################################################################
 def vl_hikmeans(data, K, nleaves,
-                max_iters=200, method='lloyd', verbose=0):
+                max_iters=200, method='lloyd', verbosity=0):
     '''
     tree, asgn = vl_hikmenas(data, K, nleaves) 
     
@@ -130,51 +130,57 @@ def vl_hikmeans(data, K, nleaves,
     '''    
     data = np.asarray(data)
     c_dtype=np_to_c_types.get(data.dtype, None)
+    data_p = data.ctypes.data_as(c_void_p)
     
     if c_dtype != c_ubyte:
         raise TypeError('data should be uint8')
     vl_dtype = c_to_vl_types[c_dtype]
     
-    M,N = data.shape
-
+    M = data.shape[0] # number of components
+    N = data.shape[1] # number of elements
+    
     algorithm = IKMAlgorithm._members[method.upper()]
 
-    depth = int(max(1,math.ceil(math.log(nleaves)/math.log(K))))
 
     ###################################
     # DO the job
+    
+    depth = math.ceil(math.log(nleaves)/ \
+                      math.log(K))
+    depth = int(max(1,depth))
+
     hikmeans_p = vl_hikm_new(algorithm)
-    hikmeans = hikmeans_p[0]
-    if verbose:
+    hikmeans = hikmeans_p.contents
+    
+    if verbosity:
         print('hikmeans: # dims: %d'%(M))
         print('hikmeans: # data: %d'%(N))
         print('hikmeans: K   : %d'%(K))
         print('hikmeans: depth: %d'%(depth))
 
     try:
-        hikmeans.verb = verbose
+        hikmeans.verb = verbosity
         vl_hikm_init(hikmeans_p, M, K, depth)
-
-        data_p = data.ctypes.data_as(c_void_p)
         vl_hikm_train(hikmeans_p, data_p, N)
         
-        if verbose:
-            print('hikmeans: done')
-
         tree = hikm_to_python(hikmeans)
+
+        asgn = np.zeros([hikmeans.depth, N],
+                        dtype=np.uint32)
+        asgn_p = asgn.ctypes.data_as(c_void_p)
+        vl_hikm_push(hikmeans_p, asgn_p, data_p, N)
+
+        if verbosity:
+            print('hikmeans: done')
         
-        return tree
-            
+        return tree, asgn, hikmeans
     finally:
-        vl_hikm_delete(hikmeans_p)
+        #vl_hikm_delete(hikmeans_p)
         pass
-
         
-
+######################################
+# help function
 def hikm_to_python(tree):
-    #K = vl_hikm_get_K(tree)
-    #depth = vl_hikm_get_depth(tree)
-    
     ptree = {'K'       : tree.K,
              'depth'   : tree.depth,
              'centers' : [],
@@ -187,11 +193,12 @@ def hikm_to_python(tree):
 
 def xcreate(pnode, node):
     node_filt = cast(node.filter, VLIKMFilt_p).contents
+    
     node_K = node_filt.K
     M = node_filt.M
     centers_p = cast(node_filt.centers, POINTER(vl_ikmacc_t))
-    centers = np.ctypeslib.as_array(centers_p, (node_K, M)).copy()
-    #print('node_K=%d, M=%d'%(node_K,M))
+    centers = np.ctypeslib.as_array(centers_p, (M, node_K)).copy()
+
     pnode['centers'] = centers
 
     if node.children:
@@ -199,7 +206,7 @@ def xcreate(pnode, node):
         [arr_sub.append({'centers':[] , 'sub': []}) for n in range(node_K)]
         
         for k in range(node_K):
-            node.children[0]
+            #node.children[0]
             child = cast(node.children[k], VLHIKMNode_p).contents
             xcreate(arr_sub[k], child)
             
