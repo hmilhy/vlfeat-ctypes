@@ -17,7 +17,7 @@ def hikmeans_print_node(node, i):
     M = node_filt.M
     node_K = node_filt.K
     centers_p =cast(node_filt.centers, POINTER(vl_ikmacc_t))
-    centers = np.ctypeslib.as_array(centers_p, (M, node_K)).copy()
+    centers = np.ctypeslib.as_array(centers_p, (node_K, M))
     print('%scenters:%s'%('*'*i,str(centers)))
     if node.children:
         for k in range(node_K):

@@ -16,12 +16,12 @@ from vlfeat.vl_ctypes import (LIB, CustomStructure, Enum,
                         np_to_c_types, c_to_vl_types)
 
 from .ikmeans import (VLIKMFilt, VLIKMFilt_p,
-                      vl_ikm_get_K, vl_ikm_get_ndims, vl_ikm_get_centers,
                       vl_ikm_new, IKMAlgorithm,vl_ikm_init)
 
 from .hikmeans import (VLHIKMNode, VLHIKMTree, VLHIKMNode_p,
                        VLHIKMNode_p, IKMAlgorithm,
                        vl_hikm_delete, vl_hikm_push)
+
 
 
 def vl_hikmeanspush(tree, data, method='lloyd', verbosity=0):
@@ -41,7 +41,8 @@ def vl_hikmeanspush(tree, data, method='lloyd', verbosity=0):
     hikmeans = python_to_hikm(tree, algorithm)
     hikmeans.verbosity = verbosity
     hikmeans_p = pointer(hikmeans)
-    
+
+        
     if verbosity:
         print("vl_hikmeanspush: ndim: %d  K:%d  depth: %d"%
               (hikmeans.M,
@@ -50,11 +51,18 @@ def vl_hikmeanspush(tree, data, method='lloyd', verbosity=0):
 
     asgn = np.zeros([hikmeans.depth, N],
                     dtype=np.uint32)
-    asgn_p = np.ctypeslib.as_ctypes(asgn)
+    asgn_p= asgn.ctypes.data_as(c_void_p)
+    
 
     vl_hikm_push(hikmeans_p, asgn_p, data_p, N)
+
     #vl_hikm_delete(hikmeans_p)
 
+    #asgn = asgn+1
+    if verbosity:
+        print('hikmeanspush: done')
+
+        
     return asgn, hikmeans
 
 def python_to_hikm(ptree, algorithm):
@@ -70,8 +78,8 @@ def python_to_hikm(ptree, algorithm):
 
 def xcreate(tree, pnode):
     #psub = pnode['sub']
-    M = pnode['centers'].shape[0]
-    node_K = pnode['centers'].shape[1]
+    M = pnode['centers'].shape[1]
+    node_K = pnode['centers'].shape[0]
 
     
     if M==0:
@@ -87,9 +95,9 @@ def xcreate(tree, pnode):
 
 
 
-    node = VLHIKMNode(vl_ikm_new(tree.method),
-                      None)
+    node = VLHIKMNode(vl_ikm_new(tree.method), None)
     node.filter=vl_ikm_new(tree.method)
+    node.children=None
     
     pcenters = pnode['centers']
     pcenters_p = np.ctypeslib.as_ctypes(pcenters)

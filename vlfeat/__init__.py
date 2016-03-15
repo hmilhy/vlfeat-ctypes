@@ -51,4 +51,7 @@ def vl_hikmeanshist(*args, **kwargs):
     return f(*args, **kwargs)
 
 ###########################################################
-#
+#AIB
+def vl_aib(*args, **kwargs):
+    from aib.vl_aib import vl_aib as f
+    return f(*args, **kwargs)

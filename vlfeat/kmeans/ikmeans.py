@@ -28,8 +28,8 @@ class VLIKMFilt(CustomStructure):
         ('max_niters', vl_size),
         ('method',     c_int),
         ('verb',       c_int),
-        ('centers',    c_void_p),
-        ('inter_dist', c_void_p),
+        ('centers',    POINTER(vl_ikmacc_t)),
+        ('inter_dist', POINTER(vl_ikmacc_t)),
     ]
 
 VLIKMFilt_p = POINTER(VLIKMFilt)
@@ -64,42 +64,6 @@ vl_ikm_push = LIB['vl_ikm_push']
 vl_ikm_push.restype = c_int
 vl_ikm_push.argtypes = [VLIKMFilt_p, POINTER(vl_uint32), POINTER(vl_uint8), vl_size]
 
-vl_ikm_push_one = LIB['vl_ikm_push_one']
-vl_ikm_push_one.restype = vl_uint
-vl_ikm_push_one.argtypes = [POINTER(vl_ikmacc_t), POINTER(vl_uint8), vl_size, vl_size]
-
-
-# retrieve data and parameters
-vl_ikm_get_ndims =LIB['vl_ikm_get_ndims']
-vl_ikm_get_ndims.restype=vl_size
-vl_ikm_get_ndims.argtypes=[VLIKMFilt_p]
-
-vl_ikm_get_K =LIB['vl_ikm_get_K']
-vl_ikm_get_K.restype=vl_size
-vl_ikm_get_K.argtypes=[VLIKMFilt_p]
-
-vl_ikm_get_verbosity = LIB['vl_ikm_get_verbosity']
-vl_ikm_get_verbosity.restype = c_int
-vl_ikm_get_verbosity.argtypes = [VLIKMFilt_p]
-
-vl_ikm_get_max_niters = LIB['vl_ikm_get_max_niters']
-vl_ikm_get_max_niters.restype = vl_size
-vl_ikm_get_max_niters.argtypes = [VLIKMFilt_p]
-
-vl_ikm_get_centers=LIB['vl_ikm_get_centers']
-vl_ikm_get_centers.restype=POINTER(vl_ikmacc_t)
-vl_ikm_get_centers.argtypes=[VLIKMFilt_p]
-
-
-# set parameters
-vl_ikm_set_verbosity=LIB['vl_ikm_set_verbosity']
-vl_ikm_set_verbosity.restype =None
-vl_ikm_set_verbosity.argtypes = [VLIKMFilt_p, c_int]
-
-vl_ikm_set_max_niters=LIB['vl_ikm_set_max_niters']
-vl_ikm_set_max_niters.restype = None
-vl_ikm_set_max_niters.argtypes = [VLIKMFilt_p, vl_size]
-
 
 def vl_ikmeans(X, K, max_niters=200 ,method='LloyD', verbosity=0):
     M,N=X.shape
@@ -115,20 +79,21 @@ def vl_ikmeans(X, K, max_niters=200 ,method='LloyD', verbosity=0):
     algorithm = IKMAlgorithm._members[method.upper()]
     
     ikmf = vl_ikm_new(algorithm)
-
-    vl_ikm_set_verbosity(ikmf, verbosity)
-    vl_ikm_set_max_niters(ikmf, max_niters)
+    ikm = ikmf.contents
+    
+    ikm.verbosity = verbosity
+    ikm.max_niters = max_niters
     vl_ikm_init_rand_data(ikmf, data_p, M,N,K)
-
+    
     err = vl_ikm_train(ikmf,data_p, N)
     
     #pdb.set_trace()
     #####################################################
     # Return results
-    center_p = vl_ikm_get_centers(ikmf)
-    C = np.ctypeslib.as_array(center_p, (M,K)).copy()
+    center_p = ikm.centers
+    C = np.ctypeslib.as_array(center_p, (K,M)).copy()
     
-    I = np.zeros((1,N), dtype=np.uint32)
+    I = np.zeros(N, dtype=np.uint32)
     I_p = I.ctypes.data_as(c_void_p)
     I_p = cast(I_p, POINTER(c_uint32))
     

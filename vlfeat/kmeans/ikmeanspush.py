@@ -14,7 +14,7 @@ from vlfeat.vl_ctypes import (LIB, CustomStructure, Enum,
                         np_to_c_types, c_to_vl_types)
 
 from .ikmeans import (IKMAlgorithm,VLIKMFilt,vl_ikmacc_t,
-                      vl_ikm_new, vl_ikm_set_verbosity,
+                      vl_ikm_new, 
                       vl_ikm_init, vl_ikm_push)
 
 def vl_ikmeanspush(X, C, verbosity=0, method='LloyD'):
@@ -32,7 +32,7 @@ def vl_ikmeanspush(X, C, verbosity=0, method='LloyD'):
     
     ikmf = vl_ikm_new(algorithm)
     
-    vl_ikm_set_verbosity(ikmf, verbosity)
+    ikmf.verbosity = verbosity
     vl_ikm_init(ikmf, C_p,M, K)
     vl_ikm_push(ikmf, asgn_p, data_p, N)
 

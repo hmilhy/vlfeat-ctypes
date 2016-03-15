@@ -15,9 +15,7 @@ from vlfeat.vl_ctypes import (LIB, CustomStructure, Enum,
                         vl_type, vl_size, vl_uint8,
                         np_to_c_types, c_to_vl_types)
 
-from .ikmeans import (VLIKMFilt, VLIKMFilt_p,vl_ikmacc_t,
-                      vl_ikm_get_K, vl_ikm_get_ndims, vl_ikm_get_centers,
-                      IKMAlgorithm)
+from .ikmeans import (VLIKMFilt, VLIKMFilt_p,vl_ikmacc_t,IKMAlgorithm)
 
 
 
@@ -57,42 +55,6 @@ vl_hikm_delete = LIB['vl_hikm_delete']
 vl_hikm_delete.restype = None
 vl_hikm_delete.argtypes = [VLHIKMTree_p]
 
-# retrieve data and parameters
-vl_hikm_get_ndims = LIB['vl_hikm_get_ndims']
-vl_hikm_get_ndims.restype  = vl_size
-vl_hikm_get_ndims.argtypes = [VLHIKMTree_p]
-
-vl_hikm_get_K = LIB['vl_hikm_get_K']
-vl_hikm_get_K.restype  = vl_size
-vl_hikm_get_K.argtypes = [VLHIKMTree_p]
-
-vl_hikm_get_depth = LIB['vl_hikm_get_depth']
-vl_hikm_get_depth.restype  = vl_size
-vl_hikm_get_depth.argtypes = [VLHIKMTree_p]
-
-vl_hikm_get_verbosity = LIB['vl_hikm_get_verbosity']
-vl_hikm_get_verbosity.restype  = c_int
-vl_hikm_get_verbosity.argtypes = [VLHIKMTree_p]
-
-vl_hikm_get_max_niters = LIB['vl_hikm_get_max_niters']
-vl_hikm_get_max_niters.restype  = vl_size
-vl_hikm_get_max_niters.argtypes = [VLHIKMTree_p]
-
-vl_hikm_get_root = LIB['vl_hikm_get_root']
-vl_hikm_get_root.restype  = VLHIKMNode
-vl_hikm_get_root.argtypes = [VLHIKMTree_p]
-
-
-# set parameters
-vl_hikm_set_verbosity = LIB['vl_hikm_set_verbosity']
-vl_hikm_set_verbosity.restype  = None
-vl_hikm_set_verbosity.argtypes = [VLHIKMTree_p, c_int]
-
-vl_hikm_set_max_niters = LIB['vl_hikm_set_max_niters']
-vl_hikm_set_max_niters.restype  = None
-vl_hikm_set_max_niters.argtypes = [VLHIKMTree_p, c_int]
-
-
 # Process data
 vl_hikm_init = LIB['vl_hikm_init']
 vl_hikm_init.restype  = None
@@ -128,7 +90,7 @@ def vl_hikmeans(data, K, nleaves,
     asgn: is a matrix with one column per datum 
     
     '''    
-    data = np.asarray(data)
+    data = np.asarray(data, dtype=np.uint8)
     c_dtype=np_to_c_types.get(data.dtype, None)
     data_p = data.ctypes.data_as(c_void_p)
     
@@ -145,8 +107,7 @@ def vl_hikmeans(data, K, nleaves,
     ###################################
     # DO the job
     
-    depth = math.ceil(math.log(nleaves)/ \
-                      math.log(K))
+    depth = math.ceil(math.log(nleaves)/math.log(K))
     depth = int(max(1,depth))
 
     hikmeans_p = vl_hikm_new(algorithm)
@@ -164,16 +125,18 @@ def vl_hikmeans(data, K, nleaves,
         vl_hikm_train(hikmeans_p, data_p, N)
         
         tree = hikm_to_python(hikmeans)
-
+        
         asgn = np.zeros([hikmeans.depth, N],
                         dtype=np.uint32)
         asgn_p = asgn.ctypes.data_as(c_void_p)
         vl_hikm_push(hikmeans_p, asgn_p, data_p, N)
 
+        #asgn = asgn+1#matlab index
+            
         if verbosity:
             print('hikmeans: done')
         
-        return tree, asgn, hikmeans
+        return tree, asgn,hikmeans
     finally:
         #vl_hikm_delete(hikmeans_p)
         pass
@@ -197,7 +160,7 @@ def xcreate(pnode, node):
     node_K = node_filt.K
     M = node_filt.M
     centers_p = cast(node_filt.centers, POINTER(vl_ikmacc_t))
-    centers = np.ctypeslib.as_array(centers_p, (M, node_K)).copy()
+    centers = np.ctypeslib.as_array(centers_p, ( node_K, M)).copy()
 
     pnode['centers'] = centers
 

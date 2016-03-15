@@ -11,6 +11,8 @@ from vlfeat.vl_ctypes import (LIB, CustomStructure, Enum,
                         vl_type, vl_size, np_to_c_types, c_to_vl_types)
 from vlfeat.utils import is_integer
 
+import pdb
+
 
 class VectorComparisonType(Enum):
     DISTANCE_L1 = 0
@@ -46,12 +48,16 @@ class VlKMeans(CustomStructure):
         ('dataType', vl_type),
         ('dimension', vl_size),
         ('numCenters', vl_size),
-
+        ('numTrees', vl_size),
+        ('maxNumComparisons', vl_size),
+        
         ('initialization', KMeansInitialization),
         ('algorithm', KMeansAlgorithm),
         ('distance', VectorComparisonType),
         ('maxNumIterations', vl_size),
+        ('minEnergyVariation', c_double),
         ('numRepetitions', vl_size),
+        
         ('verbosity', c_int),
 
         ('centers', c_void_p),
@@ -91,23 +97,14 @@ vl_kmeans_cluster.argtypes = [VlKMeans_p, c_void_p, vl_size, vl_size, vl_size]
 vl_kmeans_quantize = LIB['vl_kmeans_quantize']
 vl_kmeans_quantize.restype = None
 vl_kmeans_quantize.argtypes = [
-    VlKMeans_p, npc.ndpointer(dtype=np.uint32), c_void_p, c_void_p, vl_size]
+    VlKMeans_p, c_void_p,  c_void_p, c_void_p, vl_size]
 
 # advanced data processing
 vl_kmeans_set_centers = LIB['vl_kmeans_set_centers']
 vl_kmeans_set_centers.restype = None
 vl_kmeans_set_centers.argtypes = [VlKMeans_p, c_void_p, vl_size, vl_size]
 
-#vl_kmeans_seed_centers_with_rand_data = \
-#    LIB['vl_kmeans_seed_centers_with_rand_data']
-#vl_kmeans_seed_centers_with_rand_data.restype = None
-#vl_kmeans_seed_centers_with_rand_data.argtypes = [
-#    VlKMeans_p, c_void_p, vl_size, vl_size, vl_size]
 
-#vl_kmeans_seed_centers_plus_plus = LIB['vl_kmeans_seed_centers_plus_plus']
-#vl_kmeans_seed_centers_plus_plus.restype = None
-#vl_kmeans_seed_centers_plus_plus.argtypes = [
-#    VlKMeans_p, c_void_p, vl_size, vl_size, vl_size]
 
 vl_kmeans_refine_centers = LIB['vl_kmeans_refine_centers']
 vl_kmeans_refine_centers.restype = c_double
@@ -135,7 +132,7 @@ def vl_kmeans(data, num_centers,
 
     if data.ndim != 2:
         raise TypeError("data must be num_data x dim")
-    num_data, dim = data.shape
+    dim, num_data = data.shape
     if dim == 0:
         raise ValueError("data dimension is zero")
 
@@ -144,6 +141,7 @@ def vl_kmeans(data, num_centers,
     _check_integer(verbosity, "verbosity", 0)
     _check_integer(max_iter, "max_iter", 0)
 
+    
     algorithm = KMeansAlgorithm._members[algorithm.upper()]
     initialization = KMeansInitialization._members[initialization.upper()]
     distance = VectorComparisonType._members['DISTANCE_' + distance.upper()]
@@ -156,7 +154,8 @@ def vl_kmeans(data, num_centers,
         kmeans.algorithm = algorithm
         kmeans.initialization = initialization
         kmeans.maxNumIterations = max_iter
-
+        kmeans.distance = distance
+        
         if verbosity:
             pr = lambda *a, **k: print('kmeans:', *a, **k)
             pr("Initialization = {}".format(kmeans.initialization.name))
@@ -170,30 +169,18 @@ def vl_kmeans(data, num_centers,
             pr("num. centers = {}".format(num_centers))
             print()
 
+        #pdb.set_trace()
         data_p = data.ctypes.data_as(c_void_p)
         energy = vl_kmeans_cluster(kmeans_p, data_p, dim, num_data, num_centers)
 
         # copy out the centers
         centers_p = cast(kmeans.centers, POINTER(c_dtype))
         centers = np.ctypeslib.as_array(centers_p, (num_centers, dim)).copy()
+        
+        assignments = np.zeros(num_data, dtype=np.uint32)
+        assignments_p = assignments.ctypes.data_as(c_void_p)
+        vl_kmeans_quantize(kmeans_p, assignments_p, None, data_p, num_data)
 
-        ret = [centers]
-        ret_fields = ['centers']
-
-        if quantize:
-            assignments = np.empty(num_data, dtype=np.uint32)
-            vl_kmeans_quantize(kmeans_p, assignments, None, data_p, num_data)
-
-            ret.append(assignments)
-            ret_fields.append('assignments')
-
-        if ret_energy:
-            ret.append(energy)
-            ret_fields.append('energy')
-
-        if not quantize and not ret_energy:
-            return centers
-        return namedtuple('KMeansRetVal', ret_fields)(*ret)
-
+        return centers, assignments, energy
     finally:
         vl_kmeans_delete(kmeans_p)
